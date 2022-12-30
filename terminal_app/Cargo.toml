@@ -6,5 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = { version = "0.6", features = [  "runtime-async-std-native-tls", "postgres" ] }
-async-std = { version = "1", features = [ "attributes" ] }
+sqlx = { version = "0.6.2", features = [ "runtime-tokio-native-tls" ] }
