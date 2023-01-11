@@ -21,20 +21,20 @@ fn get_mac() -> MacAddress {
 fn build_heartbeat(mut backoff: u64, lock: Arc<Mutex<i8>>) {
     thread::sleep(Duration::from_secs(backoff));
 
+    let default_url: &str = "tcp://localhost:9951";
+    let context: Context = zmq::Context::new();
+    let proxy: Socket = context.socket(zmq::PUB).unwrap();
+    
+    let connection_url: String;
+    match env::var("heartbeat_url") {
+        Ok(url) => connection_url = url,
+        Err(_) => connection_url = default_url.to_string()
+    }
+    
     loop {
         let mutex_lock = lock.lock().unwrap();
-        let default_url: &str = "tcp://localhost:9951";
-        let context: Context = zmq::Context::new();
-        let proxy: Socket = context.socket(zmq::PUB).unwrap();
-
-        let connection_url: String;
-        match env::var("heartbeat_url") {
-            Ok(url) => connection_url = url,
-            Err(_) => connection_url = default_url.to_string()
-        }
-
         match proxy.connect(&connection_url) {
-            Ok(_) => println!("connected"),
+            Ok(_) => (),
             Err(_) => {
                 backoff *= 2;
                 if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
@@ -66,11 +66,12 @@ fn build_heartbeat(mut backoff: u64, lock: Arc<Mutex<i8>>) {
 fn main() {
     // Mutex required for Windows as heartbeat and sqlite try to use the same memory location at the same time
     let mutex_lock = Arc::new(Mutex::new(0));
-    let tread_arc_0 = mutex_lock.clone();
-    let tread_arc_1 = mutex_lock.clone();
-    let tread_arc_2 = mutex_lock.clone();
+    let heartbeat_arc = mutex_lock.clone();
+    let main_arc = mutex_lock.clone();
+    
+    // This creates a new thread that contains the heartbeat
+    let heartbeat_handle = thread::spawn(move || {build_heartbeat(0, heartbeat_arc.clone())});
 
-    let heartbeat_handle = thread::spawn(move || {build_heartbeat(0, mutex_lock.clone())});
     // Just a small example of how to use the models
     let beat: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
     let check_in: Checkin = Checkin { mac_address: beat.mac_address, student_id: "12345".to_string() };
@@ -79,8 +80,10 @@ fn main() {
     // Example of cache
     // Use https://sqliteviewer.app/#/ to observe the sql table
     let db_url = "sqlite://cache.db";
-    block_on(initialize_database(db_url, tread_arc_0));
-    block_on(insert_check_in(db_url, &check_in, tread_arc_1));
-    block_on(delete_check_in(db_url, &check_in.student_id, tread_arc_2));
+    block_on(initialize_database(db_url, main_arc.clone()));
+    block_on(insert_check_in(db_url, &check_in, main_arc.clone()));
+    block_on(delete_check_in(db_url, &check_in.student_id, main_arc.clone()));
+
+    // Threads must be joined back in or when main exits, it will force close any extra threads
     let _heartbeat_res = heartbeat_handle.join();
 }
