@@ -3,7 +3,6 @@ mod services;
 use services::cache::*;
 use zmq::{Context, Socket};
 use futures::executor::block_on;
-use async_recursion::async_recursion;
 use std::{env, thread, time::Duration};
 use models::{heartbeat::*, checkin::*};
 use mac_address::{MacAddress, get_mac_address};
@@ -19,22 +18,18 @@ fn get_mac() -> MacAddress {
     }
 }
 
-#[async_recursion(?Send)]
-async fn build_heartbeat(mut backoff: u64) {
+fn build_heartbeat(mut backoff: u64) {
     thread::sleep(Duration::from_secs(backoff));
     
     let default_url: &str = "tcp://localhost:9951";
     let context: Context = zmq::Context::new();
     let proxy: Socket = context.socket(zmq::PUB).unwrap();
-    
-    println!("Trying to get env");
+
     let connection_url: String;
     match env::var("heartbeat_url") {
         Ok(url) => connection_url = url,
         Err(_) => connection_url = default_url.to_string()
     }
-
-    println!("{}", connection_url);
 
     match proxy.connect(&connection_url) {
         Ok(_) => println!("connected"),
@@ -42,11 +37,10 @@ async fn build_heartbeat(mut backoff: u64) {
             backoff *= 2;
             if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
             println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
-            build_heartbeat(backoff).await;
+            thread::spawn(move || {build_heartbeat(backoff)});
+            return;
         }
     }
-
-    println!("{}", proxy.get_socks_proxy().unwrap().unwrap());
     
     let client: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
     
@@ -57,7 +51,8 @@ async fn build_heartbeat(mut backoff: u64) {
                 backoff *= 2;
                 if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
                 println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
-                build_heartbeat(backoff).await;
+                thread::spawn(move || {build_heartbeat(backoff)});
+                return;
             }
         }
         thread::sleep(Duration::from_secs(10));
@@ -66,8 +61,7 @@ async fn build_heartbeat(mut backoff: u64) {
 }
 
 fn main() {
-    build_heartbeat(0);
-
+    let heartbeat_handle = thread::spawn(|| {build_heartbeat(0)});
     // Just a small example of how to use the models
     let beat: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
     let check_in: Checkin = Checkin { mac_address: beat.mac_address, student_id: "12345".to_string() };
@@ -79,4 +73,5 @@ fn main() {
     block_on(initialize_database(db_url));
     block_on(insert_check_in(db_url, &check_in));
     block_on(delete_check_in(db_url, &check_in.student_id));
+    let _heartbeat_res = heartbeat_handle.join();
 }
