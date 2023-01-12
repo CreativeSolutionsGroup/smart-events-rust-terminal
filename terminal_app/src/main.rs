@@ -46,8 +46,8 @@ fn build_heartbeat(mut backoff: u64, lock: Arc<Mutex<i8>>) {
         }
         
         let client: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
-    
-        match proxy.send(client.mac_address.as_bytes(), 0) {
+        let data = format!("heartbeat {}", client.mac_address);
+        match proxy.send(data.as_bytes(), 0) {
             Ok(_) => println!("sent heartbeat"),
             Err(_) => {
                 backoff *= 2;
