@@ -2,16 +2,16 @@ use sqlx::{Sqlite, migrate::MigrateDatabase, SqlitePool};
 use crate::models::checkin::*;
 
 // Create a new database or connect to an existing one
-pub async fn initialize_database(url: &str) {
+pub async fn initialize_database() {
     let db: SqlitePool;
     // Tries to connect and if it can't connect then it will create a new database
-    match SqlitePool::connect(url).await {
+    match SqlitePool::connect("sqlite://cache.db").await {
         Ok(pool) => { 
             db = pool;
         },
         Err(_) => {
-            Sqlite::create_database(url).await.unwrap();
-            db = SqlitePool::connect(url).await.unwrap();
+            Sqlite::create_database("sqlite://cache.db").await.unwrap();
+            db = SqlitePool::connect("sqlite://cache.db").await.unwrap();
         }
     }
     let create_table_str = 
@@ -24,15 +24,15 @@ pub async fn initialize_database(url: &str) {
 }
 
 // Deletes a given checkin with id from the cache.
-pub async fn delete_check_in (url: &str, id: &str) {
+pub async fn delete_check_in (id: &str) {
     let db: SqlitePool;
-    match SqlitePool::connect(url).await {
+    match SqlitePool::connect("sqlite://cache.db").await {
         Ok(pool) => { 
             db = pool;
         },
         Err(_) => {
-            initialize_database(url).await;
-            db = SqlitePool::connect(url).await.unwrap();
+            initialize_database().await;
+            db = SqlitePool::connect("sqlite://cache.db").await.unwrap();
         }
     }
     let delete_checkin_str = 
@@ -42,15 +42,15 @@ pub async fn delete_check_in (url: &str, id: &str) {
 }
 
 // Inserts a checkin into the cache at the back
-pub async fn insert_check_in (url: &str, check_in: &Checkin) {
+pub async fn insert_check_in (check_in: &Checkin) {
     let db: SqlitePool;
-    match SqlitePool::connect(url).await {
+    match SqlitePool::connect("sqlite://cache.db").await {
         Ok(pool) => { 
             db = pool;
         },
         Err(_) => {
-            initialize_database(url).await;
-            db = SqlitePool::connect(url).await.unwrap();
+            initialize_database().await;
+            db = SqlitePool::connect("sqlite://cache.db").await.unwrap();
         }
     }
     let insert_checkin_str = 
