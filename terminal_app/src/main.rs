@@ -18,48 +18,49 @@ fn get_mac() -> MacAddress {
     }
 }
 
-fn build_heartbeat(mut backoff: u64, lock: Arc<Mutex<i8>>) {
-    thread::sleep(Duration::from_secs(backoff));
-
-    let default_url: &str = "tcp://localhost:9951";
-    let context: Context = zmq::Context::new();
-    let proxy: Socket = context.socket(zmq::PUB).unwrap();
-    
-    let connection_url: String;
-    match env::var("heartbeat_url") {
-        Ok(url) => connection_url = url,
-        Err(_) => connection_url = default_url.to_string()
-    }
-    
+fn build_heartbeat(lock: Arc<Mutex<i8>>) {
+    let mut backoff = 0;
+    let default_url: &str = "tcp://localhost:9950";
     loop {
-        let mutex_lock = lock.lock().unwrap();
-        match proxy.connect(&connection_url) {
-            Ok(_) => (),
-            Err(_) => {
-                backoff *= 2;
-                if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
-                println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
-                std::mem::drop(mutex_lock);
-                thread::spawn(move || {build_heartbeat(backoff, lock)});
-                return;
-            }
+        thread::sleep(Duration::from_secs(backoff));
+        
+        let context: Context = zmq::Context::new();
+        let proxy: Socket = context.socket(zmq::REQ).unwrap();
+        
+        let connection_url: String;
+        match env::var("heartbeat_url") {
+            Ok(url) => connection_url = url,
+            Err(_) => connection_url = default_url.to_string()
         }
         
-        let client: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
-        let data = format!("heartbeat {}", client.mac_address);
-        match proxy.send(data.as_bytes(), 0) {
-            Ok(_) => println!("sent heartbeat"),
-            Err(_) => {
-                backoff *= 2;
-                if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
-                println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
-                std::mem::drop(mutex_lock);
-                thread::spawn(move || {build_heartbeat(backoff, lock)});
-                return;
+        loop {
+            let mutex_lock = lock.lock().unwrap();
+            match proxy.connect(&connection_url) {
+                Ok(_) => println!("ZMQ Connected"),
+                Err(_) => {
+                    backoff *= 2;
+                    if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
+                    println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
+                    std::mem::drop(mutex_lock);
+                    break;
+                }
             }
+            
+            let client: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
+            let data = format!("heartbeat {}", client.mac_address);
+            match proxy.send(data.as_bytes(), 0) {
+                Ok(_) => println!("sent heartbeat"),
+                Err(_) => {
+                    backoff *= 2;
+                    if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
+                    println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
+                    std::mem::drop(mutex_lock);
+                    break;
+                }
+            }
+            thread::sleep(Duration::from_secs(10));
+            backoff = 0;
         }
-        thread::sleep(Duration::from_secs(10));
-        backoff = 0;
     }
 }
 
@@ -70,7 +71,7 @@ fn main() {
     let main_arc = mutex_lock.clone();
     
     // This creates a new thread that contains the heartbeat
-    let heartbeat_handle = thread::spawn(move || {build_heartbeat(0, heartbeat_arc.clone())});
+    let heartbeat_handle = thread::spawn(move || {build_heartbeat(heartbeat_arc.clone())});
 
     // Just a small example of how to use the models
     let beat: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
