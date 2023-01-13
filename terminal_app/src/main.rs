@@ -1,7 +1,7 @@
 mod models;
 mod services;
 use services::cache::*;
-use zmq::{Context, Socket};
+use zmq::{Context, Socket, Message};
 use futures::executor::block_on;
 use std::{env, thread, time::Duration, sync::{Arc, Mutex}};
 use models::{heartbeat::*, checkin::*};
@@ -20,7 +20,7 @@ fn get_mac() -> MacAddress {
 
 fn build_heartbeat(lock: Arc<Mutex<i8>>) {
     let mut backoff = 0;
-    let default_url: &str = "tcp://localhost:9950";
+    let default_url: &str = "tcp://localhost:9951";
     loop {
         thread::sleep(Duration::from_secs(backoff));
         
@@ -47,9 +47,15 @@ fn build_heartbeat(lock: Arc<Mutex<i8>>) {
             }
             
             let client: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
-            let data = format!("heartbeat {}", client.mac_address);
+            let data = format!("{}", client.mac_address);
+            let mut msg: Message = zmq::Message::new();
             match proxy.send(data.as_bytes(), 0) {
-                Ok(_) => println!("sent heartbeat"),
+                Ok(_) => {
+                    proxy.recv(&mut msg, 0).unwrap();
+                    if msg.as_str().unwrap().contains("ACK") {
+                        println!("sent heartbeat");
+                    }
+                },
                 Err(_) => {
                     backoff *= 2;
                     if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
