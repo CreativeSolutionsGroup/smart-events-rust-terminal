@@ -1,10 +1,12 @@
 use sqlx::{Sqlite, migrate::MigrateDatabase, SqlitePool};
+use std::sync::{Arc, Mutex};
 use crate::models::checkin::*;
 
 // Create a new database or connect to an existing one
-pub async fn initialize_database() {
+pub async fn initialize_database(lock: Arc<Mutex<i8>>) {
     let db: SqlitePool;
     // Tries to connect and if it can't connect then it will create a new database
+    let _mutex_lock = lock.lock().unwrap();
     match SqlitePool::connect("sqlite://cache.db").await {
         Ok(pool) => { 
             db = pool;
@@ -24,14 +26,16 @@ pub async fn initialize_database() {
 }
 
 // Deletes a given checkin with id from the cache.
-pub async fn delete_check_in (id: &str) {
+pub async fn delete_check_in (id: &str, lock: Arc<Mutex<i8>>) {
     let db: SqlitePool;
+    let mutex_lock = lock.lock().unwrap();
     match SqlitePool::connect("sqlite://cache.db").await {
         Ok(pool) => { 
             db = pool;
         },
         Err(_) => {
-            initialize_database().await;
+            std::mem::drop(mutex_lock);
+            initialize_database(lock).await;
             db = SqlitePool::connect("sqlite://cache.db").await.unwrap();
         }
     }
@@ -42,14 +46,16 @@ pub async fn delete_check_in (id: &str) {
 }
 
 // Inserts a checkin into the cache at the back
-pub async fn insert_check_in (check_in: &Checkin) {
+pub async fn insert_check_in (check_in: &Checkin, lock: Arc<Mutex<i8>>) {
     let db: SqlitePool;
+    let mutex_lock = lock.lock().unwrap();
     match SqlitePool::connect("sqlite://cache.db").await {
         Ok(pool) => { 
             db = pool;
         },
         Err(_) => {
-            initialize_database().await;
+            std::mem::drop(mutex_lock);
+            initialize_database(lock).await;
             db = SqlitePool::connect("sqlite://cache.db").await.unwrap();
         }
     }
