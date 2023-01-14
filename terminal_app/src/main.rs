@@ -70,7 +70,7 @@ fn build_heartbeat(lock: Arc<Mutex<i8>>) {
     }
 }
 
-fn wait_for_input() {
+fn wait_for_input(lock: Arc<Mutex<i8>>) {
     println!("Input ID:");
     let id_length = 5;
     let mut id = String::new();
@@ -84,7 +84,7 @@ fn wait_for_input() {
                 // correct id parameters
                 let new_checkin: Checkin = Checkin { mac_address: get_mac().to_string(), student_id: id.trim().to_string() };
                 println!("mac_address: {}, student_id: {}", new_checkin.mac_address, new_checkin.student_id);
-                block_on(insert_check_in(&new_checkin));
+                block_on(insert_check_in(&new_checkin, lock.clone()));
             },
             Err(e) => println!("Did not have a correct student id. Recieved: {}", e),
         }
@@ -95,7 +95,7 @@ fn wait_for_input() {
                 // correct id parameters
                 let new_checkin: Checkin = Checkin { mac_address: get_mac().to_string(), student_id: mod_id.trim().to_string() };
                 println!("mac_address: {}, student_id: {}", new_checkin.mac_address, new_checkin.student_id);
-                block_on(insert_check_in(&new_checkin));
+                block_on(insert_check_in(&new_checkin, lock.clone()));
             },
             Err(e) => println!("Did not have a correct student id. Recieved: {}", e),
         }
@@ -118,10 +118,10 @@ fn main() {
     
     // Example of cache
     // Use https://sqliteviewer.app/#/ to observe the sql table
-    block_on(initialize_database());
+    block_on(initialize_database(main_arc.clone()));
     // block_on(delete_check_in(&check_in.student_id));
 
-    wait_for_input();
+    wait_for_input(main_arc.clone());
 
     // Threads must be joined back in or when main exits, it will force close any extra threads
     let _heartbeat_res = heartbeat_handle.join();
