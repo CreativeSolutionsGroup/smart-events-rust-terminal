@@ -47,7 +47,7 @@ fn build_heartbeat(lock: Arc<Mutex<i8>>) {
             }
             
             let client: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
-            let data = format!("{}", client.mac_address);
+            let data = format!("heartbeat {}", client.mac_address);
             let mut msg: Message = zmq::Message::new();
             match proxy.send(data.as_bytes(), 0) {
                 Ok(_) => {
