@@ -5,6 +5,7 @@ use zmq::{Context, Socket, Message};
 use futures::executor::block_on;
 use std::{io, i128, env, thread, time::Duration, sync::{Arc, Mutex}};
 use models::{heartbeat::*, checkin::*};
+use async_recursion::async_recursion;
 use mac_address::{MacAddress, get_mac_address};
 
 fn get_mac() -> MacAddress {
@@ -52,7 +53,7 @@ fn build_heartbeat(lock: Arc<Mutex<i8>>) {
             match proxy.send(data.as_bytes(), 0) {
                 Ok(_) => {
                     proxy.recv(&mut msg, 0).unwrap();
-                    if msg.as_str().unwrap().contains("ACK") {
+                    if msg.as_str().unwrap().contains(&client.mac_address) {
                         println!("sent heartbeat");
                     }
                 },
@@ -70,12 +71,16 @@ fn build_heartbeat(lock: Arc<Mutex<i8>>) {
     }
 }
 
-fn wait_for_input(lock: Arc<Mutex<i8>>) {
+#[async_recursion(?Send)] // This function current does not work
+async fn wait_for_input(lock: Arc<Mutex<i8>>) {
     println!("Input ID:");
     let id_length = 5;
     let mut id = String::new();
  
     io::stdin().read_line(&mut id).expect("failed to readline");
+
+    wait_for_input(lock.clone());
+    
     id = id.trim().to_string();
 
     if id.len() == id_length {
@@ -99,7 +104,7 @@ fn wait_for_input(lock: Arc<Mutex<i8>>) {
             },
             Err(e) => println!("Did not have a correct student id. Recieved: {}", e),
         }
-    }
+    }   
 }
 
 fn main() {
@@ -111,18 +116,12 @@ fn main() {
     // This creates a new thread that contains the heartbeat
     let heartbeat_handle = thread::spawn(move || {build_heartbeat(heartbeat_arc.clone())});
 
-    // Just a small example of how to use the models
-    let beat: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
-    let check_in: Checkin = Checkin { mac_address: beat.mac_address, student_id: "12345".to_string() };
-    println!("mac_address: {}, student_id: {}", check_in.mac_address, check_in.student_id);
-    
-    // Example of cache
-    // Use https://sqliteviewer.app/#/ to observe the sql table
+    // Initialize the database we will be using
     block_on(initialize_database(main_arc.clone()));
-    // block_on(delete_check_in(&check_in.student_id));
 
-    wait_for_input(main_arc.clone());
+    // Start up the waiting for input
+    block_on(wait_for_input(main_arc.clone()));
 
     // Threads must be joined back in or when main exits, it will force close any extra threads
-    let _heartbeat_res = heartbeat_handle.join();
+    heartbeat_handle.join().unwrap();
 }
