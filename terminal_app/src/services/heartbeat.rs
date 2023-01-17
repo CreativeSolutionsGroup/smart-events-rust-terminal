@@ -1,10 +1,10 @@
-use std::{sync::{Arc, Mutex}, time::Duration, thread, env};
+use std::{time::Duration, thread, env};
 use zmq::{Context, Socket, Message};
 use crate::{models::heartbeat::Heartbeat, services::get_mac::*};
 
-pub fn build_heartbeat(lock: Arc<Mutex<i8>>) {
+pub fn build_heartbeat() {
     let mut backoff = 0;
-    let default_url: &str = "tcp://*:9951";
+    let default_url: &str = "tcp://localhost:9951";
     loop {
         thread::sleep(Duration::from_secs(backoff));
         
@@ -12,20 +12,18 @@ pub fn build_heartbeat(lock: Arc<Mutex<i8>>) {
         let proxy: Socket = context.socket(zmq::REQ).unwrap();
         
         let connection_url: String;
-        match env::var("heartbeat_url") {
+        match env::var("HEARTBEAT_URL") {
             Ok(url) => connection_url = url,
             Err(_) => connection_url = default_url.to_string()
         }
         
         loop {
-            let mutex_lock = lock.lock().unwrap();
             match proxy.connect(&connection_url) {
                 Ok(_) => println!("ZMQ Connected"),
                 Err(_) => {
                     backoff *= 2;
                     if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
                     println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
-                    std::mem::drop(mutex_lock);
                     break;
                 }
             }
@@ -44,10 +42,10 @@ pub fn build_heartbeat(lock: Arc<Mutex<i8>>) {
                     backoff *= 2;
                     if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
                     println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
-                    std::mem::drop(mutex_lock);
                     break;
                 }
             }
+            proxy.disconnect(&connection_url).unwrap();
             thread::sleep(Duration::from_secs(10));
             backoff = 0;
         }
