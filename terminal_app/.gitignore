@@ -11,3 +11,4 @@ Cargo.lock
 
 # This is the database that will hold check-ins and should be unique to each client
 cache.db
+.vscode/
