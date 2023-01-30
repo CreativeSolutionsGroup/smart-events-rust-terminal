@@ -1,6 +1,6 @@
+use crate::{models::heartbeat::Heartbeat, services::get_mac::*};
 use std::{time::Duration, thread, env};
 use zmq::{Context, Socket, Message};
-use crate::{models::heartbeat::Heartbeat, services::get_mac::*};
 
 pub fn build_heartbeat() {
     let mut backoff = 0;
@@ -12,7 +12,7 @@ pub fn build_heartbeat() {
         let proxy: Socket = context.socket(zmq::REQ).unwrap();
         
         let connection_url: String;
-        match env::var("HEARTBEAT_URL") {
+        match env::var("PROXY_URL") {
             Ok(url) => connection_url = url,
             Err(_) => connection_url = default_url.to_string()
         }
