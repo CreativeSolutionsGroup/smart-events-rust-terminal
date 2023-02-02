@@ -9,6 +9,12 @@
 
 This is the terminal application to be used in conjuction with our [SmartEvents API](https://github.com/CreativeSolutionsGroup/smart-events-api). This application sends checkins from students when they visit events. When a student scans their student ID card with the NFC scanner, we cache the checkin, then send it over ZMQ to the API backend.
 
+## How to start (Linux)
+
+```
+PROXY_URL=tcp://localhost:9951 <path to binary>
+```
+
 ## Current Release
 
 [v0.1.0](https://github.com/CreativeSolutionsGroup/smart-events-rust-terminal/releases/tag/v0.1.0)
