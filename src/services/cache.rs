@@ -41,7 +41,7 @@ pub fn cache_observer() {
     let db: Connection = Connection::open("./cache.sqlite").unwrap();
     // Get the proxy connection url
     let default_url: &str = "tcp://localhost:9951";
-    let mut connection_url: Arc<String>;
+    let connection_url: Arc<String>;
     match env::var("PROXY_URL") {
         Ok(url) => connection_url = Arc::new(url),
         Err(_) => connection_url = Arc::new(default_url.to_owned())
