@@ -11,7 +11,8 @@ pub fn initialize_database() {
     let create_table_str = 
         "CREATE TABLE IF NOT EXISTS check_ins (
             mac_address TEXT NOT NULL,
-            student_id  TEXT NOT NULL UNIQUE
+            student_id  TEXT NOT NULL UNIQUE,
+            time_stamp  TEXT NOT NULL
         );";
     db.execute(create_table_str, ()).unwrap();
 }
@@ -28,8 +29,8 @@ pub fn delete_check_in (id: &str) {
 pub fn insert_check_in (check_in: &Checkin) {
     let db: Connection = Connection::open("./cache.sqlite").unwrap();
     let insert_checkin_str = 
-        format!("INSERT INTO check_ins (mac_address, student_id) VALUES(\"{}\", \"{}\");", 
-                &check_in.mac_address, &check_in.student_id);
+        format!("INSERT INTO check_ins (mac_address, student_id, time_stamp) VALUES(\"{}\", \"{}\", \"{}\");", 
+                &check_in.mac_address, &check_in.student_id, &check_in.time_stamp);
     match db.execute(&insert_checkin_str, ()) {
         Ok(_) => (),
         Err(_) => (),
@@ -55,7 +56,8 @@ pub fn cache_observer() {
         let checkin_map = checkin_query.query_map([], |row| {
             Ok(Checkin {
                 mac_address: row.get(0).unwrap(),
-                student_id: row.get(1).unwrap()
+                student_id: row.get(1).unwrap(),
+                time_stamp: row.get(2).unwrap()
             })
         }).unwrap();
 
@@ -80,7 +82,7 @@ fn send_checkin(check_in: &Checkin, conn: Arc<String>) {
         Err(_) => return
     }
     
-    let data = format!("checkin {}, {}", check_in.mac_address, check_in.student_id);
+    let data = format!("checkin {} {} {}", check_in.mac_address, check_in.student_id, check_in.time_stamp);
     let mut msg: Message = zmq::Message::new();
     match proxy.send(data.as_bytes(), 0) {
         Ok(_) => {
