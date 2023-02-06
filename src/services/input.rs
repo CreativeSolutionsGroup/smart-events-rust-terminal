@@ -23,7 +23,7 @@ fn save_input(mut id: String) {
         match id.parse::<i128>() {
             Ok(_) => {
                 // correct id parameters
-                let new_checkin: Checkin = Checkin { mac_address: get_mac().to_string(), student_id: id.trim().to_string() };
+                let new_checkin: Checkin = Checkin { mac_address: get_mac().to_string(), student_id: id.trim().to_string(), time_stamp:  };
                 println!("mac_address: {}, student_id: {}", new_checkin.mac_address, new_checkin.student_id);
                 insert_check_in(&new_checkin);
             },
@@ -34,7 +34,7 @@ fn save_input(mut id: String) {
         match mod_id.parse::<i128>() {
             Ok(_) => {
                 // correct id parameters
-                let new_checkin: Checkin = Checkin { mac_address: get_mac().to_string(), student_id: mod_id.trim().to_string() };
+                let new_checkin: Checkin = Checkin { mac_address: get_mac().to_string(), student_id: mod_id.trim().to_string(), time_stamp:  };
                 println!("mac_address: {}, student_id: {}", new_checkin.mac_address, new_checkin.student_id);
                 insert_check_in(&new_checkin);
             },
