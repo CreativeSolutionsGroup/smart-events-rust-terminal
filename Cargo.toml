@@ -8,9 +8,10 @@ edition = "2021"
 [dependencies]
 
 zmq = "0.10.0"
-mac_address = "1.1.4"
+chrono = "0.4.23"
 threadpool = "1.8.1"
-rusqlite = { version = "0.28.0", features = ["bundled"] }
+mac_address = "1.1.4"
 futures = { version = "0.3.25" }
 futures-timer = { version ="3.0" }
+rusqlite = { version = "0.28.0", features = ["bundled"] }
 async-std = { version = "1.10", features = [ "attributes" ] }
