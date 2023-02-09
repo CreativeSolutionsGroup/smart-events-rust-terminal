@@ -26,7 +26,7 @@ fn save_input(mut id: String) {
                 // correct id parameters
                 let new_checkin: Checkin = Checkin { mac_address: get_mac().to_string(), 
                                                         student_id: id.trim().to_string(), 
-                                                        time_stamp: Local::now().format("%Y-%m-%d_%H:%M:%S").to_string() };
+                                                        time_stamp: Local::now().format("%Y-%m-%dT%H:%M:%S").to_string() };
                 println!("mac_address: {}, student_id: {}", new_checkin.mac_address, new_checkin.student_id);
                 insert_check_in(&new_checkin);
             },
