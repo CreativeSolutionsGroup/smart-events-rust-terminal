@@ -17,17 +17,17 @@ pub fn build_heartbeat() {
             Err(_) => connection_url = default_url.to_string()
         }
         
-        loop {
-            match proxy.connect(&connection_url) {
-                Ok(_) => println!("ZMQ Connected"),
-                Err(_) => {
-                    backoff *= 2;
-                    if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
-                    println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
-                    break;
-                }
+        match proxy.connect(&connection_url) {
+            Ok(_) => (),
+            Err(_) => {
+                backoff *= 2;
+                if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
+                println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
+                continue;
             }
-            
+        }
+
+        loop {
             let client: Heartbeat = Heartbeat { mac_address: get_mac().to_string() };
             let data = format!("heartbeat {}", client.mac_address);
             let mut msg: Message = zmq::Message::new();
@@ -45,7 +45,6 @@ pub fn build_heartbeat() {
                     break;
                 }
             }
-            proxy.disconnect(&connection_url).unwrap();
             thread::sleep(Duration::from_secs(10));
             backoff = 0;
         }
