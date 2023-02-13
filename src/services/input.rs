@@ -1,7 +1,7 @@
 use std::io;
 use chrono::{self, Local};
 use threadpool::ThreadPool;
-use crate::{models::checkin::*, services::{get_mac::*, cache::insert_check_in}};
+use crate::{models::checkin::*, services::{get_mac::*, cache::{insert_check_in, save_error}}};
 
 pub fn wait_for_input() {
     let pool = ThreadPool::new(100);
@@ -30,7 +30,10 @@ fn save_input(mut id: String) {
                 println!("mac_address: {}, student_id: {}", new_checkin.mac_address, new_checkin.student_id);
                 insert_check_in(&new_checkin);
             },
-            Err(e) => println!("Did not have a correct student id. Recieved: {}", e),
+            Err(e) => {
+                save_error(&AppError::new("Parsing Error".to_owned(), id));
+                println!("Did not have a correct student id. Recieved: {}", e);
+            },
         }
     } else if id.len() > id_length {
         let mod_id = &id[0..id_length];
@@ -42,8 +45,14 @@ fn save_input(mut id: String) {
                                                         time_stamp: Local::now().format("%Y-%m-%d_%H:%M:%S.%3f").to_string() };
                 println!("mac_address: {}, student_id: {}", new_checkin.mac_address, new_checkin.student_id);
                 insert_check_in(&new_checkin);
+                },
+            Err(e) => {
+                save_error(&AppError::new("Parsing Error & Length to long".to_owned(), id));
+                println!("Did not have a correct student id. Recieved: {}", e);
             },
-            Err(e) => println!("Did not have a correct student id. Recieved: {}", e),
         }
-    }   
+    } else {
+        // Length to small
+        save_error(&AppError::new("Length to small".to_owned(), id));
+    }
 }
