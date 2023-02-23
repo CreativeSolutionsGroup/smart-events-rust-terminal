@@ -5,17 +5,18 @@ use zmq::{Context, Socket, Message};
 pub fn build_heartbeat() {
     let mut backoff = 0;
     let default_url: &str = "tcp://localhost:9951";
+    let connection_url: String;
+    match env::var("PROXY_URL") {
+        Ok(url) => connection_url = url,
+        Err(_) => connection_url = default_url.to_string()
+    }
+    println!("Proxy URL: {}", connection_url);
+
     loop {
         thread::sleep(Duration::from_secs(backoff));
         
         let context: Context = zmq::Context::new();
         let proxy: Socket = context.socket(zmq::REQ).unwrap();
-        
-        let connection_url: String;
-        match env::var("PROXY_URL") {
-            Ok(url) => connection_url = url,
-            Err(_) => connection_url = default_url.to_string()
-        }
         
         match proxy.connect(&connection_url) {
             Ok(_) => (),

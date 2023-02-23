@@ -1,10 +1,11 @@
 mod models;
 mod services;
-use services::{input::*, heartbeat::*, cache::{initialize_database, cache_observer, error_observer}};
+use services::{input::*, heartbeat::*, cache::{initialize_database, cache_observer, error_observer}, get_mac::get_mac};
 use std::thread;
 
 fn main() {
     initialize_database();
+    println!("MAC Address: {}", get_mac());
 
     // Startup necessary threads
     let heartbeat_handle = thread::spawn(|| {build_heartbeat()});
