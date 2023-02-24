@@ -21,7 +21,7 @@ The appication used to be just called the rust terminal application. That sounde
 
 ## Linux (prefered)
 
-Check your GLIBC version for version >= 2.29. You can do that using `ldd --version` in your linux terminal. As long as your system is up to date you can move on the Install phase. If your GLIBC is out of date you will need to update the unit. You can do that using `---` and walking through the upgrade process.
+Check your GLIBC version for version >= 2.29. You can do that using `ldd --version` in your linux terminal. As long as your system is up to date you can move on the Install phase. If your GLIBC is out of date you will need to update the unit. You can do that using `sudo apt-get update` then `sudo apt-get dist-upgrade`, and walking through the upgrade process.
 
 To install follow these commands:
 
