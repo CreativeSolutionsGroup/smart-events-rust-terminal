@@ -134,8 +134,8 @@ pub fn error_observer() {
         // Create pool of threads that wait till all threads finish
         let pool = ThreadPool::new(200);
         // Get all current check_ins in the cache
-        let mut checkin_query = db.prepare("SELECT * FROM errors").unwrap();
-        let checkin_map = checkin_query.query_map([], |row| {
+        let mut error_query = db.prepare("SELECT * FROM errors WHERE received = 0").unwrap();
+        let error_map = error_query.query_map([], |row| {
             Ok(AppError {
                 id: row.get(0).unwrap(),
                 etype: row.get(1).unwrap(),
@@ -145,7 +145,7 @@ pub fn error_observer() {
             })
         }).unwrap();
 
-        for app_error in checkin_map {
+        for app_error in error_map {
             if app_error.as_ref().unwrap().received == 1 { continue; }
             // Create a new thread for each checkin
             let temp_conn = connection_url.clone();
@@ -175,8 +175,8 @@ fn send_error(app_error: &AppError, conn: Arc<String>) {
             proxy.recv(&mut msg, 0).unwrap();
             if msg.as_str().unwrap().contains(&format!("{} {}", &app_error.etype, app_error.input)) {
                 let update_error_str = 
-                        format!("UPDATE errors SET received = 1 WHERE id = {:?};", 
-                            &app_error.id);
+                    format!("UPDATE errors SET received = 1 WHERE id = {:?};", 
+                        &app_error.id);
                 match db.execute(&update_error_str, ()) {
                     Ok(_) => (),
                     Err(_) => (),
