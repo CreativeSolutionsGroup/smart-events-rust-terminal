@@ -7,6 +7,12 @@
 
 # Smart Events SICK Application (Student Intermediary Checkin Kiosk)
 
+> **Matthew 25:44-45**
+> 
+> 44. Then shall they also answer him, saying, Lord, when saw we thee an hungred, or athirst, or a stranger, or naked, or sick, or in prison, and did not minister unto thee?
+> 
+> 45. Then shall he answer them, saying, Verily I say unto you, Inasmuch as ye did  _it_ not to one of the least of these, ye did  _it_ not to me.
+
 This is the SICK application to be used in conjuction with our [SmartEvents API](https://github.com/CreativeSolutionsGroup/smart-events-api). This application sends checkins from students when they visit events. When a student scans their student ID card with the boopers (NFC scanner), we cache the checkin, then send it over a ZMQ Proxy to the API backend. This allows for infinite expansion on both the sender and reciever side of the proxy. Using the REQ/REP system for our kiosks and backend we are able to acomplish a round robin effect keeping the load low on each host. We also have a sidecar logger off of the proxy that works using PUB/SUB protocols.
 
 ## Why the name SICK
