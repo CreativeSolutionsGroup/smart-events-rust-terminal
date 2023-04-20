@@ -17,9 +17,18 @@ pub fn build_heartbeat() {
         
         let context: Context = zmq::Context::new();
         let proxy: Socket = context.socket(zmq::REQ).unwrap();
+        match proxy.set_rcvtimeo(2000) {
+            Ok(_) => {},
+            Err(_) => {
+                backoff *= 2;
+                if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
+                println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
+                continue;
+            }
+        }
         
         match proxy.connect(&connection_url) {
-            Ok(_) => (),
+            Ok(_) => {},
             Err(_) => {
                 backoff *= 2;
                 if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
@@ -34,9 +43,18 @@ pub fn build_heartbeat() {
             let mut msg: Message = zmq::Message::new();
             match proxy.send(data.as_bytes(), 0) {
                 Ok(_) => {
-                    proxy.recv(&mut msg, 0).unwrap();
-                    if msg.as_str().unwrap().contains(&client.mac_address) {
-                        println!("sent heartbeat");
+                    match proxy.recv(&mut msg, 0) {
+                        Ok(_) => {
+                            if msg.as_str().unwrap().contains(&client.mac_address) {
+                                println!("sent heartbeat");
+                            }
+                        },
+                        Err(_) => {
+                            backoff *= 2;
+                            if backoff > 128 { backoff = 128 } else if backoff == 0 { backoff = 1 }
+                            println!("ZMQ Error. Attempting to reconnect in {} seconds", backoff);
+                            break;
+                        }
                     }
                 },
                 Err(_) => {

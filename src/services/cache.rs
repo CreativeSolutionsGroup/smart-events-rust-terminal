@@ -98,6 +98,10 @@ fn send_checkin(check_in: &Checkin, conn: Arc<String>) {
     // Send checkin over ZMQ
     let context: Context = zmq::Context::new();
     let proxy: Socket = context.socket(zmq::REQ).unwrap();
+    match proxy.set_rcvtimeo(2000) {
+        Ok(_) => {},
+        Err(_) => return
+    }
     match proxy.connect(&conn) {
         Ok(_) => (),
         Err(_) => return
@@ -107,10 +111,14 @@ fn send_checkin(check_in: &Checkin, conn: Arc<String>) {
     let mut msg: Message = zmq::Message::new();
     match proxy.send(data.as_bytes(), 0) {
         Ok(_) => {
-            proxy.recv(&mut msg, 0).unwrap();
-            if msg.as_str().unwrap().contains(&check_in.student_id) {
-                println!("Sent checkin for student {}", check_in.student_id);
-                delete_check_in(&check_in.student_id);
+            match proxy.recv(&mut msg, 0) {
+                Ok(_) => {
+                    if msg.as_str().unwrap().contains(&check_in.student_id) {
+                        println!("Sent checkin for student {}", check_in.student_id);
+                        delete_check_in(&check_in.student_id);
+                    }
+                },
+                Err(_) => return
             }
         },
         Err(_) => {
@@ -163,6 +171,10 @@ fn send_error(app_error: &AppError, conn: Arc<String>) {
     // Send checkin over ZMQ
     let context: Context = zmq::Context::new();
     let proxy: Socket = context.socket(zmq::REQ).unwrap();
+    match proxy.set_rcvtimeo(2000) {
+        Ok(_) => {},
+        Err(_) => return
+    }
     match proxy.connect(&conn) {
         Ok(_) => (),
         Err(_) => return
@@ -172,16 +184,20 @@ fn send_error(app_error: &AppError, conn: Arc<String>) {
     let mut msg: Message = zmq::Message::new();
     match proxy.send(data.as_bytes(), 0) {
         Ok(_) => {
-            proxy.recv(&mut msg, 0).unwrap();
-            if msg.as_str().unwrap().contains(&format!("{} {}", &app_error.etype, app_error.input)) {
-                let update_error_str = 
-                    format!("UPDATE errors SET received = 1 WHERE id = {:?};", 
-                        &app_error.id);
-                match db.execute(&update_error_str, ()) {
-                    Ok(_) => (),
-                    Err(_) => (),
-                };
-            }
+            match proxy.recv(&mut msg, 0) {
+                Ok(_) => {
+                    if msg.as_str().unwrap().contains(&format!("{} {}", &app_error.etype, app_error.input)) {
+                        let update_error_str = 
+                            format!("UPDATE errors SET received = 1 WHERE id = {:?};", 
+                                &app_error.id);
+                        match db.execute(&update_error_str, ()) {
+                            Ok(_) => (),
+                            Err(_) => (),
+                        };
+                    }
+                },
+                Err(_) => return
+            };
         },
         Err(_) => {
             return
