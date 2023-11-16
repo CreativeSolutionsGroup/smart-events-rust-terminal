@@ -10,8 +10,8 @@ pub fn initialize_database() {
     let db: Connection = Connection::open("./cache.sqlite").unwrap();
     let create_checkin_table_str = 
         "CREATE TABLE IF NOT EXISTS check_ins (
-            id          TEXT        NOT NULL,
-            student_id  TEXT        NOT NULL UNIQUE,
+            booper_id   TEXT        NOT NULL,
+            student_id  TEXT        NOT NULL,
             time_stamp  TEXT        NOT NULL
         );";
     let create_error_table_str = 
