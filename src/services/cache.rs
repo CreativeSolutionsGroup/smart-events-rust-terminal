@@ -44,7 +44,7 @@ pub fn delete_many_check_ins (check_ins: HashMap<String, Checkin>) {
 pub fn insert_check_in (check_in: &Checkin) {
     let db: Connection = Connection::open("./cache.sqlite").unwrap();
     let insert_checkin_str = 
-        format!("INSERT INTO check_ins (id, student_id, time_stamp) VALUES(\"{}\", \"{}\", \"{}\");", 
+        format!("INSERT INTO check_ins (booper_id, student_id, time_stamp) VALUES(\"{}\", \"{}\", \"{}\");", 
                 &check_in.id, &check_in.student_id, &check_in.time_stamp);
     match db.execute(&insert_checkin_str, ()) {
         Ok(_) => (),
