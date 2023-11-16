@@ -1,10 +1,14 @@
 use chrono::{self, Local};
+use serde::Serialize;
 
+#[derive(Serialize)]
 pub struct Checkin {
-    pub mac_address: String,
+    pub id: String,
     pub student_id: String,
     pub time_stamp: String
 }
+
+
 
 #[derive(Clone, Debug)]
 pub struct AppError {
