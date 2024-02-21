@@ -1,10 +1,13 @@
 use chrono::Local;
 use reqwest::Client;
+use reqwest::header::CONTENT_TYPE;
+use tokio::time::timeout;
 use std::{collections::HashMap};
+use std::time::Duration;
 
 use crate::{models::checkin::Checkin, services::{cache::delete_many_check_ins, getid::get_booper_id}};
 
-const URL: &str = "https://main.d3e17gvbrma8q6.amplifyapp.com/api/sick";
+const URL: &str = "http://localhost:3001/api/sick";
 
 pub async fn send_heartbeat() {
     let timestamp: String = Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
@@ -14,9 +17,28 @@ pub async fn send_heartbeat() {
     client_information.insert("id", get_booper_id());
     client_information.insert("timestamp", timestamp.clone());
 
-    match api_client.put(URL).json(&client_information).send().await {
-        Ok(x) => println!("Sent heartbeat at {} -> {}", timestamp, x.status().as_str()),
-        Err(x) => println!("Failed sending heartbeat at {} -> {}", timestamp, x),
+    // Make the request with a timeout of 2 seconds
+    let response = timeout(Duration::from_secs(2), async {
+        api_client
+            .put(URL)
+            .header(CONTENT_TYPE, "application/json")
+            .json(&client_information)
+            .send()
+            .await
+    }).await;
+
+    match response {
+        Ok(res) => {
+            // Handle the response here
+            match res {
+                Ok(r) => println!("Request successful: {:?}", r),
+                Err(e) => println!("Request failed with status: {:?}", e)
+            }
+        }
+        Err(_) => {
+            // Handle timeout or other errors here
+            println!("Request timed out or encountered an error.");
+        }
     }
 }
 
